@@ -69,24 +69,48 @@ python -m pip install -r requirements.txt
 python -m pip check
 ```
 
-**准备与检查。** `prepare` 校验已有的模型和数据，并补齐缺少的文件。只准备 CPU 验收材料时使用 `prepare --cpu-only`。`audit` 核验五任务的 11 份数据文件；`list` 显示当前批次进度。
+**服务器材料。** 从本机把 `assets/` 的内容复制到项目根目录下的 `assets/`。T5-base 的 `model.safetensors`、`config.json`、`generation_config.json`、`spiece.model` 和 `tokenizer.json` 放在 `assets/t5-base/`，五个任务分别放在 `assets/{mnli,sst2,cola,qnli,mrpc}/`。各任务需要 `train.parquet`，MNLI 另需 `validation_matched.parquet` 和 `validation_mismatched.parquet`，其余四个任务各需 `validation.parquet`。复制后在已激活的项目环境运行以下离线检查。模型文件的预期 SHA-256 来自 `glue/prepare.py`，数据文件的大小、行数和 SHA-256 来自 `glue_files.json`。
 
 ```bash
-python suite.py prepare
-python suite.py audit
-python suite.py list
-python suite.py test
+python - <<'CHECK_ASSETS'
+from glue.machine import current
+from glue.prepare import MODEL_HASH, digest
+from glue.audit_glue_data import audit
+
+for name, expected in MODEL_HASH.items():
+    path = current.model_dir / name
+    if not path.is_file() or digest(path) != expected:
+        raise SystemExit(f"模型文件缺失或 SHA-256 不符：{path}")
+records = audit(current.data_dir)["files"]
+for record in records:
+    print(record["path"], record["status"])
+if len(records) != 11 or any(r["status"] != "verified" for r in records):
+    raise SystemExit("GLUE 数据未通过校验")
+print("T5-base 5/5，GLUE 11/11")
+CHECK_ASSETS
 ```
 
-**GPU 实验。** 先用 MRPC 做三步短测，输出保存在 `runs/glue-smoke-v1/`。后两条命令分别执行表 1 的 30 项和表 9 额外的 9 项，正式输出保存在 `runs/glue-v1/`。
+**四卡运行（Linux）。** 已部署的服务器环境从项目根目录用 `source .venv/bin/activate` 激活。获得同一计算节点的四张 GPU 后，在作业环境中保留调度器提供的设备可见性，用 `hostname` 和下面的命令核对逻辑卡，再手动运行 MRPC 三步短测。短测保存在 `runs/glue-smoke-v1/`。
 
 ```bash
-python suite.py run --smoke --task mrpc --method ga --seed 0
-python suite.py run --scope main
-python suite.py run --scope ablation
+python - <<'CHECK_GPU'
+import torch
+assert torch.cuda.is_available() and torch.cuda.device_count() == 4
+for i in range(4):
+    p = torch.cuda.get_device_properties(i)
+    print(f"cuda:{i}  {p.name}  {p.total_memory / 2**30:.1f} GiB")
+CHECK_GPU
+python suite.py run --smoke --task mrpc --method ga --seed 0 --device cuda:0 --microbatch 32 --eval-batch 32
+python suite.py list --smoke --task mrpc --method ga --seed 0
 ```
 
-默认设备为 `cuda:0`，训练与验证的单次 batch 均为 8。换设备或使用共享存储时，可在子命令后指定 `--device`、`--microbatch`、`--eval-batch`、`--model-dir`、`--data-dir`、`--runs-dir`、`--analysis-dir` 和 `--cache-dir`，也可使用 `--config machine.local.json`。正式训练中断时，用 `python suite.py run --retry --task mrpc --method ga --seed 0` 这样的命令从头重跑对应配置，旧记录保留。可选的 `python suite.py diagnose --seed 0` 单独检查 MRPC 的首步更新方向。
+确认短测显示“完整完成”后，从同一作业执行下列命令。`run_a100_4gpu.sh` 同样适用于 4 × RTX 3090 24GB。每卡独立训练，脚本继承作业的可见 GPU，按逻辑编号 0–3 分工。训练和验证 batch 默认均为 32，有效 batch 32，梯度累积 1 次。每次启动分别写入 `runs/launcher-*/gpu-{0,1,2,3}.log`，39 项正式结果保存在 `runs/glue-v1/`。
+
+```bash
+TRAIN_MICRO=32 EVAL_BATCH=32 bash run_a100_4gpu.sh
+```
+
+直接使用 `python suite.py run` 时，默认设备为 `cuda:0`，训练 microbatch 和验证 batch 均为 8。换设备或使用共享存储时，可在子命令后指定 `--device`、`--microbatch`、`--eval-batch`、`--model-dir`、`--data-dir`、`--runs-dir`、`--analysis-dir` 和 `--cache-dir`，也可使用 `--config machine.local.json`。正式训练中断时，用 `python suite.py run --retry --task mrpc --method ga --seed 0 --microbatch 32 --eval-batch 32` 这样的命令从头重跑对应配置，旧记录保留。可选的 `python suite.py diagnose --seed 0` 单独检查 MRPC 的首步更新方向。
 
 ## 实验结果与复核
 
