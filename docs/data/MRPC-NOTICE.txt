@@ -1,0 +1,11 @@
+Microsoft Research Paraphrase Corpus · 课程教学使用
+
+Copyright © Microsoft Corporation. All rights reserved.
+适用许可为同目录 MSR-SSLA.rtf，即发布方 Microsoft Research Shared Source License Agreement 的完整文本。该协议允许按其条款为非商业教学和研究使用、复制及分发语料及数据衍生版本。接收方使用及再分发这些文件时适用同一协议。
+
+修改与来源说明（2026-11-19）：提交的是 GLUE 按 MRPC 任务整理的 train / validation Parquet，不同于 Microsoft 原始安装包的文件格式及划分。本项目从 nyu-mll/glue 的固定 revision bcdcba79d07bc864c1c254ccfcedcce55bcc9a8c 获取这两份 Parquet，保留其逐字节内容，仅将本地文件名缩短为 train.parquet 和 validation.parquet。下载来源和校验信息列于 glue_files.json。涉及语料的衍生材料遵循同一数据许可。
+
+微软原始下载页：https://www.microsoft.com/en-us/download/details.aspx?id=52398
+原始安装包：https://download.microsoft.com/download/d/4/6/d46ff87a-f6b9-4252-aa8b-3604ed519838/MSRParaphraseCorpus.msi
+安装包 SHA-256：fc9fb1b89c5181e8ae50eed49d1f103757febc6b22f8cc841614f27b88ec810c
+本目录的 RTF 取自该安装包内的 License Agreement 对话框；保留了原许可和版权声明。

@@ -1,0 +1,16 @@
+/.cache/
+/.venv/
+/assets/
+/runs/
+/analysis_output/
+/course/
+/machine.local.json
+__pycache__/
+*.pyc
+*.pt
+*.safetensors
+*.zip
+*.log
+.env
+.env.*
+.DS_Store
