@@ -12,6 +12,7 @@ from glue import machine
 from glue.catalog import MAIN, EXTRA, Job, jobs, locate, DONE
 
 PENDING="尚未完成"
+NO_REFERENCE="无论文参照"
 
 
 def read(path):
@@ -68,16 +69,19 @@ def comparison(name,split,observations,reference):
         vals=observations[method]
         complete=None not in vals
         local[method]=mean(vals) if complete else None
+        deviation = NO_REFERENCE
+        if isinstance(paper, (int, float)):
+            deviation = local[method] - paper if complete else PENDING
         row.update({f"paper_{method}_pct":paper,f"paper_{method}_disp_pp":disp,
                     f"local_{method}_pct":local[method] if complete else PENDING,
                     f"local_{method}_sd_pp":stdev(vals) if complete else PENDING,
-                    f"{method}_deviation_pp":local[method]-paper if complete and isinstance(paper,(int,float)) else PENDING})
+                    f"{method}_deviation_pp":deviation})
     deltas=[b-a if a is not None and b is not None else PENDING
             for a,b in zip(observations["lora"],observations["ga"])]
     row.update({f"paired_s{i}_pp":v for i,v in enumerate(deltas)})
     row["paired_mean_pp"]=mean(deltas) if PENDING not in deltas else PENDING
     a,b=[reference[m][0] for m in MAIN]
-    row["paper_gain_pp"]=b-a if isinstance(a,(int,float)) and isinstance(b,(int,float)) else "无论文参照"
+    row["paper_gain_pp"]=b-a if isinstance(a,(int,float)) and isinstance(b,(int,float)) else NO_REFERENCE
     return row
 
 
@@ -87,7 +91,7 @@ def report_tables(out,values,run_rows,equal):
     for i,t in enumerate(paper["task_order"]):
         for split in TASKS[t].validation:
             vals={m:[values.get((Job(t,m,s),split)) for s in range(3)] for m in MAIN}
-            ref={m:paper["table1"][m][i] if split!="validation_mismatched" else ("无论文参照","无论文参照")
+            ref={m:paper["table1"][m][i] if split!="validation_mismatched" else (NO_REFERENCE,NO_REFERENCE)
                  for m in MAIN}
             table.append(comparison(t,split,vals,ref))
     equal_vals={m:equal[m]["per_seed"] for m in MAIN}

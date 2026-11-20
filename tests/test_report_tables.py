@@ -83,8 +83,17 @@ class ReportTests(unittest.TestCase):
             self.assertTrue((root/fixed["ga_predictions"]).is_file())
             self.assertEqual(json.loads(fixed["ga_logits"]),{"different":1,"equivalent":0})
 
+    def test_mismatched_deviation_has_no_paper_reference(self):
+        scores = {"lora": [85., 86., 87.], "ga": [86., 87., 88.]}
+        reference = {method: ("无论文参照", "无论文参照") for method in scores}
+        row = comparison("mnli", "validation_mismatched", scores, reference)
+        self.assertEqual(row["lora_deviation_pp"], "无论文参照")
+        self.assertEqual(row["ga_deviation_pp"], "无论文参照")
+        self.assertEqual(row["paired_mean_pp"], 1.)
+
     def test_sample_sd_and_missing_seed(self):
         r=comparison("mrpc","validation",{"ga":[0.,1.,2.],"lora":[0.,0.,None]},
                      {"ga":[85.29,.24],"lora":[68.38,.01]})
+        self.assertEqual(r["lora_deviation_pp"], PENDING)
         self.assertEqual((r["local_ga_sd_pp"],r["paired_s0_pp"],r["paired_s2_pp"],r["paired_mean_pp"]),
                          (1.,0.,PENDING,PENDING))
