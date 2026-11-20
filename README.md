@@ -4,6 +4,8 @@
 
 ## 本次服务器结果
 
+组员请从[小组交接文档](docs/team-handoff.md)开始，里面列出了可认领的任务和对应的材料。
+
 39/39 项正式实验完成。五任务等权平均准确率为 LoRA 82.02%、LoRA-GA 87.30%，三种子配对平均提升 5.28 个百分点。各项最终预测与原始日志可离线复核。[结果与复核命令](results/glue-v1/README.md) · [表 1](results/glue-v1/table1_comparison.csv) · [MRPC 消融](results/glue-v1/table9_mrpc.csv)
 
 仓库按复现步骤整理自课程源码快照 `df76fc9b336c8d96e2ef6969eae489acbabbae27`。原作者代码固定在 `c4cd5372`，`docs/复现实验记录.md` 保留运行前的适配记录。
