@@ -2,9 +2,31 @@ import math
 import unittest
 import torch
 from glue.adapters import Adapter, METHODS, initialize_factors, resolved_init, scale
+from glue.glue_train import GA_INIT_LOGIT_RTOL, INIT_LOGIT_ATOL, INIT_LOGIT_RTOL, check_initial_logits
 
 
 class InitializerTests(unittest.TestCase):
+    def test_fp32_initial_probe(self):
+        before = torch.tensor([[[1., 1.000001, 23.]]], dtype=torch.float32)
+        after = before.clone()
+        after[0, 0, 2] += 0.0004673
+        with self.assertRaises(AssertionError):
+            check_initial_logits(before, after, [0, 1], rtol=INIT_LOGIT_RTOL, atol=INIT_LOGIT_ATOL)
+        check_initial_logits(before, after, [0, 1], rtol=GA_INIT_LOGIT_RTOL, atol=INIT_LOGIT_ATOL)
+        with self.assertRaises(AssertionError):
+            check_initial_logits(before, after, [1, 2], rtol=GA_INIT_LOGIT_RTOL, atol=INIT_LOGIT_ATOL)
+        invalid = {
+            "large vocabulary drift": (2, 23.01),
+            "changed class": (0, 1.000002),
+            "tied classes": (0, before[0, 0, 1].item()),
+            "non-finite score": (2, float("nan")),
+        }
+        for case, (index, value) in invalid.items():
+            changed = before.clone()
+            changed[0, 0, index] = value
+            with self.subTest(case=case), self.assertRaises(AssertionError):
+                check_initial_logits(before, changed, [0, 1], rtol=GA_INIT_LOGIT_RTOL, atol=INIT_LOGIT_ATOL)
+
     def test_five_branches_and_compensation(self):
         grad = torch.diag(torch.arange(48.,0.,-1.)).double()[:40]
         results={}

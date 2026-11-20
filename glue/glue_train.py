@@ -14,11 +14,16 @@ from transformers import get_cosine_schedule_with_warmup
 from glue.adapters import install, restore, snapshot, resolved_init
 from glue import machine
 from glue.model_runtime import base, probe, seed_all, select_device
-from glue.glue_data import GlueCorpus, evaluate_split
+from glue.glue_data import GlueCorpus, evaluate_split, predict
 from glue.glue_tasks import TASKS
 from glue.system_io import save_json
 from glue.prepare import ROOT, DATA_REV, MODEL_REV, WEIGHT_HASH, digest
 from glue.catalog import eval_steps
+
+
+INIT_LOGIT_RTOL = 1e-5
+GA_INIT_LOGIT_RTOL = 1.5e-5
+INIT_LOGIT_ATOL = 2e-4
 
 
 def clock(device):
@@ -118,6 +123,21 @@ def train_epoch(model,corpus,order,config,out,started,init_seconds):
                 peak_training_MiB=peak_train/2**20,peak_validation_MiB=peak_eval/2**20)
 
 
+def check_initial_logits(before, after, candidates, *, rtol, atol):
+    if not (torch.isfinite(before).all() and torch.isfinite(after).all()):
+        raise AssertionError("Non-finite initialization probe logits")
+    torch.testing.assert_close(after, before, rtol=rtol, atol=atol)
+    if rtol == INIT_LOGIT_RTOL:
+        return
+    # Keep the original tolerance at the position and tokens used for GLUE accuracy.
+    old_scores = before[:, 0, candidates]
+    new_scores = after[:, 0, candidates]
+    torch.testing.assert_close(new_scores, old_scores, rtol=INIT_LOGIT_RTOL, atol=atol)
+    for index, (old, new) in enumerate(zip(old_scores.tolist(), new_scores.tolist())):
+        if predict(old) != predict(new):
+            raise AssertionError(f"Initialization changed the candidate prediction for probe {index}")
+
+
 def execute(job,out,limit,*,smoke,microbatch=8,eval_batch=8,device=None):
     if not torch.cuda.is_available():
         raise RuntimeError("Training requires CUDA")
@@ -166,11 +186,15 @@ def execute(job,out,limit,*,smoke,microbatch=8,eval_batch=8,device=None):
     modules=install(model,corpus,job.method,init_stats,svd_seed=job.seed)
     init_seconds=clock(corpus.device)-started
     after=probe(model,fixed)
-    init_stats.update(max_abs_logits=(before-after).abs().max().item(),probe_split=next(iter(task.validation)),
+    # FP32 evaluates the compensated base and the low-rank update separately.
+    init_tolerance = dict(rtol=GA_INIT_LOGIT_RTOL if job.method == "ga" else INIT_LOGIT_RTOL,
+                          atol=INIT_LOGIT_ATOL)
+    init_stats.update(logit_tolerance=init_tolerance, candidate_logit_rtol=INIT_LOGIT_RTOL,
+                      max_abs_logits=(before-after).abs().max().item(),probe_split=next(iter(task.validation)),
                       probe_ids=[r["idx"] for r in corpus.rows[next(iter(task.validation))][:4]],
                       finite=bool(torch.isfinite(after).all() and torch.isfinite(before).all()))
     save_json(out/"init.json",init_stats)
-    torch.testing.assert_close(after,before,rtol=1e-5,atol=2e-4)
+    check_initial_logits(before, after, corpus.candidates, **init_tolerance)
     torch.save(snapshot(modules),out/"initial.pt")
     seed_all(job.seed,device)
     stats=train_epoch(model,corpus,order,config,out,started,init_seconds)
