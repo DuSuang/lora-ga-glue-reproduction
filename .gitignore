@@ -15,3 +15,4 @@ __pycache__/
 .env.*
 .DS_Store
 /.runtime/
+!/results/glue-v1/evidence/**/*.zip

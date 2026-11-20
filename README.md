@@ -2,6 +2,12 @@
 
 本作业复现 Shaowen Wang、Linxi Yu 和 Jian Li 发表于 NeurIPS 2024 的论文 *LoRA-GA: Low-Rank Adaptation with Gradient Approximation*。我们选取论文表 1 中 **T5-base 在五个 GLUE 任务上的 LoRA 和 LoRA-GA 两行**作为主实验，并选取附录表 9 的 **MRPC 列**做初始化消融。[论文全文](https://proceedings.neurips.cc/paper_files/paper/2024/file/62c4718cc334f6a0a62fb81c4a2095a1-Paper-Conference.pdf) · [作者代码（固定提交）](https://github.com/Outsider565/LoRA-GA/tree/c4cd5372c75b290924214b348008891f744512ef/reproduce)
 
+## 本次服务器结果
+
+39/39 项正式实验完成。五任务等权平均准确率为 LoRA 82.02%、LoRA-GA 87.30%，三种子配对平均提升 5.28 个百分点。各项最终预测与原始日志可离线复核。[结果与复核命令](results/glue-v1/README.md) · [表 1](results/glue-v1/table1_comparison.csv) · [MRPC 消融](results/glue-v1/table9_mrpc.csv)
+
+仓库按复现步骤整理自课程源码快照 `df76fc9b336c8d96e2ef6969eae489acbabbae27`。原作者代码固定在 `c4cd5372`，`docs/复现实验记录.md` 保留运行前的适配记录。
+
 ## 作者源码与本组适配
 
 本组在论文作者开源的 `Outsider565/LoRA-GA`（提交 `c4cd5372`）基础上适配了 T5-base 五任务实验。`reference/` 保留作者源码节选及许可证。作者的梯度估计与初始化位于 [reference/run_exp.py](reference/run_exp.py)；本组正式训练调用的核心方法位于 [glue/adapters.py](glue/adapters.py)。
