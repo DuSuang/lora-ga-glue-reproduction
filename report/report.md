@@ -1,12 +1,69 @@
 # LoRA-GA 复现报告：T5-base 五任务对比与 MRPC 初始化消融
 
-> 报告编写中：第 4、5 节已审核，其余章节待完成。
+> 报告草稿：正文已补齐，交付材料及组内贡献待完成。
 
 ## 1. 复现目标与范围
 
+全参数微调需要更新模型的全部参数，训练时还要保存对应的梯度和优化器状态，资源开销较大。LoRA 冻结预训练权重，只训练两个低秩矩阵来表示权重增量，从而减少可训练参数及相关存储开销。但低秩参数化也改变了权重的更新方式，在相同训练预算下，效果可能落后于全参数微调。
+
+LoRA-GA 从初始化入手改善这一问题。普通 LoRA 随机初始化一个矩阵、将另一个置零；LoRA-GA 则先用少量训练样本估计梯度，再利用梯度方向和尺度调整初始化两个矩阵，使训练初期的权重更新更接近全参数微调的梯度方向。本文关注这种初始化能否提高有限训练预算下的效果，以及梯度方向和尺度调整分别起到什么作用。
+
+本次主实验对应论文表 1，比较 T5-base 在 MNLI、SST-2、CoLA、QNLI、MRPC 上的 LoRA 与 LoRA-GA，每种配置运行三个种子，共 30 次训练。消融实验对应附录表 9 的 MRPC 列，比较五种初始化；复用主实验中的 LoRA 和完整 LoRA-GA 结果后，额外增加 9 次训练，合计 39 次。本次以普通 LoRA 为同条件基线，未安排全参数微调实验。
+
+除最终准确率外，我们还分析 MRPC 的逐条预测，并绘制 CoLA、MRPC 的训练曲线，观察不同初始化如何影响分类结果和训练过程。
+
 ## 2. 方法与本组实现
 
+LoRA 将有效权重写为 `W_eff = C + sBA`。其中，基座权重 `C` 冻结，只训练低秩矩阵 `A`、`B`，`s` 为缩放系数。普通 LoRA 随机初始化 `A`，将 `B` 置零，因此模型从原预训练权重开始训练。
+
+LoRA-GA 则先用训练数据计算梯度，再据此初始化两个矩阵。本组使用训练集原始顺序中的前 8 条样本，逐条计算损失对目标层权重的梯度并取平均。对各层梯度做低秩 SVD 后，用前 8 个右奇异向量构造 `A₀`，第 9—16 个左奇异向量构造 `B₀`，再调整两者的尺度。
+
+由于 `B₀A₀` 非零，安装适配器时将基座权重改为 `C = W₀ − sB₀A₀`，使初始有效权重仍等于预训练权重 `W₀`。梯度估计只在初始化时执行，正式训练仍然只更新 `A`、`B`。
+
+代码基于官方 LoRA-GA 实现改写。本组完成了五任务训练流程、MNLI 三分类评测和五种初始化的统一实现，并保存逐条预测用于复核结果。变长标签的损失计算也与作者代码进行了对照，保证微批划分前后使用相同的训练目标。
+
+五种初始化的区别如下：
+
+| Method | Initialization | Scale adjustment |
+|---|---|---|
+| LoRA | Random A, zero B | No |
+| Gaussian | Random A and B | No |
+| +SO | Random A and B | Yes |
+| +GA | Gradient singular vectors | No |
+| LoRA-GA | Gradient singular vectors | Yes |
+
+Gaussian 在非方形矩阵上的方差按论文表 3 设置，与官方代码该分支的维度对应不同。具体公式和实现差异见仓库的复现实验记录。
+
 ## 3. 实验设置
+
+实验使用 T5-base，每个任务训练一轮，种子为 0、1、2。同一任务、同一种子下，各方法使用相同的训练样本顺序、更新步数和验证时点。
+
+| Task | Training samples | Validation samples | Training steps |
+|---|---:|---:|---:|
+| MNLI | 392,702 | 9,815 matched | 12,272 |
+| SST-2 | 67,349 | 872 | 2,105 |
+| CoLA | 8,551 | 1,043 | 268 |
+| QNLI | 104,743 | 5,463 | 3,274 |
+| MRPC | 3,668 | 408 | 115 |
+
+适配器安装在注意力层的 q、k、v、o 和前馈层的 wi、wo，共训练 3,244,032 个参数。主要配置如下：
+
+| Setting | Value |
+|---|---|
+| Rank / Alpha | 8 / 16 |
+| Training / Evaluation batch size | 32 / 32 |
+| Optimizer / Learning rate | AdamW / 1e−4 |
+| Learning-rate schedule | Cosine, 3% warmup |
+| Weight decay / Gradient clipping | 0 / 1 |
+| Maximum sequence length | 128 |
+| Calibration samples / Gamma | 8 / 16 |
+| Precision | FP32, TF32 disabled |
+
+正式实验在 RTX 3090 上运行，使用 Python 3.11.18、PyTorch 2.3.0+cu121 和 Transformers 4.40.2。
+
+为与论文对照，五项任务统一报告验证集 Accuracy，包括 CoLA。评测时比较解码首位置各候选标签的分数；MNLI 使用三个候选类别，matched 划分计入主表，mismatched 结果另行保存。各项结果取三个种子的均值和样本标准差，五任务平均采用等权计算。
+
+本组报告完整一轮训练结束时的结果。官方脚本按验证损失选择检查点，两者的取值方式有所不同。
 
 ## 4. 实验结果与分析
 
@@ -85,7 +142,37 @@ MRPC 消融实验中，完整 LoRA-GA 在三个种子下均取得最高准确率
 
 ## 6. 复现与交付说明
 
-主实验结果可在仓库根目录运行 `python3 report/analyze_main.py` 复核；MRPC 消融及类别预测统计可运行 `python3 report/analyze_mrpc.py` 复核。脚本仅依赖 Python 标准库，从归档预测重算结果并核对 Table 1、Table 2。完整运行与交付说明待补充。
+当前工作分支为 `reproduction/analysis`。结果位于 `results/glue-v1/`，其中 39 份实验记录包含配置、训练与验证日志、最终逐条预测。
+
+在仓库根目录运行以下命令，可重新计算全部实验结果及报告中的两张表，无需 GPU：
+
+```bash
+python3 results/glue-v1/verify_results.py
+python3 report/analyze_main.py
+python3 report/analyze_mrpc.py
+```
+
+全部实验已通过复核，输出为 `39/39 verified`。
+
+绘图使用单独的环境，避免改变训练依赖：
+
+```bash
+python -m pip install -r report/plot-requirements.txt
+python report/plot_training.py --output report/figures
+```
+
+重新训练时，按 README 安装 Python 3.11 环境和 GPU 依赖，再准备模型与数据。以下命令运行 MRPC 的三步最小样例：
+
+```bash
+python suite.py prepare
+python suite.py run --smoke --task mrpc --method ga --seed 0 \
+  --device cuda:0 --microbatch 32 --eval-batch 32
+python suite.py list --smoke --task mrpc --method ga --seed 0
+```
+
+去掉 `--smoke` 即运行该配置的正式实验。模型和数据版本、下载地址及校验值已固定在代码中。
+
+最终提交包包括源代码、实验数据与日志、环境和运行说明，以及报告和配图。打包时还需从实验服务器补入原始数据和完整运行记录，并将新增的分析脚本、绘图脚本和报告图片加入打包清单。
 
 ## 参考文献
 
