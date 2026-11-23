@@ -1,6 +1,6 @@
 # LoRA-GA 复现报告：T5-base 五任务对比与 MRPC 初始化消融
 
-> 报告编写中：第 4.1、4.2 节已审核，其余章节待完成。
+> 报告编写中：第 4.1—4.3 节已审核，其余章节待完成。
 
 ## 1. 复现目标与范围
 
@@ -60,6 +60,20 @@ GA 的提升主要来自对不等价句对的识别。MRPC 验证集包含 279 �
 论文中同样是完整 LoRA-GA 得分最高，但单独使用两个组件时的结果与本组不同。论文的 +SO 和 +GA 分别为 67.97% 和 66.09%，均低于普通 LoRA 的 68.38%；本组则分别达到 75.00% 和 75.82%，都获得了提升。因此，我们复现了两种组件结合后效果最好的结果，同时也观察到：在本次实验设置下，单独调整尺度或使用梯度方向，就已经能改善普通 LoRA 的表现。
 
 ### 4.3 训练过程与收敛表现
+
+![CoLA training curves](figures/cola-training.png)
+
+**Figure 1. Training loss and validation accuracy on CoLA.** Lines show the mean across three seeds; shaded regions show ±1 sample standard deviation. Loss uses a logarithmic scale without smoothing. Markers indicate recorded validation evaluations.
+
+在 CoLA 上，LoRA-GA 的优势在训练前期就已出现。第 54 步时，其验证准确率达到 72.64%，已经超过普通 LoRA 训练结束时的 69.35%。此后，LoRA-GA 继续提升至 80.35%，普通 LoRA 则逐渐停留在 69% 左右。结合 loss 曲线可以看到，GA 更快降低了训练损失，并且较早取得的准确率优势一直保持到训练结束。
+
+![MRPC training curves](figures/mrpc-training.png)
+
+**Figure 2. Training loss and validation accuracy for five initializations on MRPC.** Lines show the mean across three seeds; shaded regions show ±1 sample standard deviation. Loss uses a logarithmic scale without smoothing. Markers indicate recorded validation evaluations. LoRA and Gaussian accuracy curves overlap from step 35 onward.
+
+MRPC 更明显地表现出训练 loss 与分类准确率的区别。普通 LoRA 和 Gaussian 的 loss 持续下降，但从第 35 步起，两者在各次评估中的准确率都停在 68.38%。结合上一节的最终预测结果，这说明训练损失的降低，并没有让它们在本轮训练结束时摆脱只预测多数类的情况。完整 LoRA-GA 则在第 81 步达到 83.42%，之后的平均准确率保持在 83% 左右。
+
+两个单组件版本虽然最终都优于普通 LoRA，但训练中途出现了明显波动：仅梯度方向版本在第 35 步的平均准确率降至 42.57%，仅尺度调整版本在第 46 步降至 56.70%，之后才逐步回升。完整 GA 在早期也有波动，但从第 35 步起，在后续各次评估中均高于两个单组件版本。这补充了最终消融表没有展示的过程差异：在本次训练中，方向与尺度结合不仅取得了更高的最终准确率，也更早取得了持续领先的表现。
 
 ## 5. 结论与局限
 
