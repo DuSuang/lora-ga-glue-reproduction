@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run from an allocation with four visible GPUs on the same machine.
 set -euo pipefail
-cd -- "$(dirname -- "$0")"
+cd -- "$(dirname -- "$0")/.."
 microbatch=${TRAIN_MICRO:-32}
 eval_batch=${EVAL_BATCH:-32}
 python -c 'import torch; n = torch.cuda.device_count(); print("Visible CUDA devices:", n); assert n >= 4, "Four visible CUDA devices are required"'

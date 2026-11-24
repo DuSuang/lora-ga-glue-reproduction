@@ -10,7 +10,7 @@ from glue.catalog import checksum
 
 
 def audit(data_dir):
-    manifest=json.loads((ROOT/"glue_files.json").read_text(encoding="utf8"))
+    manifest=json.loads((ROOT/"experiments/glue_files.json").read_text(encoding="utf8"))
     records=[]
     for name,splits in manifest["tasks"].items():
         task=TASKS[name]

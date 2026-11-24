@@ -62,7 +62,7 @@ class PackageTests(unittest.TestCase):
                         analysis_dir="metrics",cache_dir="scratch space")
             (work/"machine.json").write_text(json.dumps(config),encoding="utf8")
             source=machine.current
-            manifest=json.loads((checkout/"glue_files.json").read_text(encoding="utf8"))
+            manifest=json.loads((checkout/"experiments/glue_files.json").read_text(encoding="utf8"))
             for name,splits in manifest["tasks"].items():
                 folder=work/config["data_dir"]/name
                 folder.mkdir(parents=True)

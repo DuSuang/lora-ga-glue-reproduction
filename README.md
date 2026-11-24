@@ -1,18 +1,26 @@
 # 自然语言处理课程期中作业：LoRA-GA 论文复现
 
+## 提交材料位置
+
+**实验报告以提交包根目录的《LoRA-GA复现报告.pdf》为准。** 下列路径均相对于本 README 所在目录。
+
+| 材料 | 位置 | 内容 |
+|---|---|---|
+| 实验代码 | [suite.py](suite.py)、[glue/](glue/)、[experiments/](experiments/) | `suite.py` 是运行入口，`glue/` 包含初始化、训练与评测实现，`experiments/` 包含实验配置与四卡运行脚本。 |
+| 实验结果 | [results/glue-v1/](results/glue-v1/) | `table1_comparison.csv` 对应报告表 1，`table9_mrpc.csv` 对应报告表 2。`evidence/` 保存 39 项实验的日志和最终逐条预测，`verify_results.py` 用于复核。 |
+| 实验报告 | [LoRA-GA复现报告.pdf](LoRA-GA复现报告.pdf) | 正式评阅版，含正文、图表和成员贡献说明。 |
+
+[report/](report/) 随包提供报告的 Markdown 源稿、插图、分析与绘图脚本，可用于复算并核对报告表格。五个任务的训练及验证数据位于 `assets/`，数据来源与许可位于 `docs/data/`。作者参考代码及许可证位于 `reference/`，正确性测试位于 `tests/`，依赖清单位于 `requirements.txt`，环境与校验记录位于 `docs/validation/`。
+
+## 复现范围与结果
+
 本作业复现 Shaowen Wang、Linxi Yu 和 Jian Li 发表于 NeurIPS 2024 的论文 *LoRA-GA: Low-Rank Adaptation with Gradient Approximation*。我们选取论文表 1 中 **T5-base 在五个 GLUE 任务上的 LoRA 和 LoRA-GA 两行**作为主实验，并选取附录表 9 的 **MRPC 列**做初始化消融。[论文全文](https://proceedings.neurips.cc/paper_files/paper/2024/file/62c4718cc334f6a0a62fb81c4a2095a1-Paper-Conference.pdf) · [作者代码（固定提交）](https://github.com/Outsider565/LoRA-GA/tree/c4cd5372c75b290924214b348008891f744512ef/reproduce)
-
-## 本次服务器结果
-
-组员请从[小组交接文档](docs/team-handoff.md)开始，里面列出了可认领的任务和对应的材料。
 
 39/39 项正式实验完成。五任务等权平均准确率为 LoRA 82.02%、LoRA-GA 87.30%，三种子配对平均提升 5.28 个百分点。各项最终预测与原始日志可离线复核。[结果与复核命令](results/glue-v1/README.md) · [表 1](results/glue-v1/table1_comparison.csv) · [MRPC 消融](results/glue-v1/table9_mrpc.csv)
 
-仓库按复现步骤整理自课程源码快照 `df76fc9b336c8d96e2ef6969eae489acbabbae27`。原作者代码固定在 `c4cd5372`，`docs/复现实验记录.md` 保留运行前的适配记录。
-
 ## 作者源码与本组适配
 
-本组在论文作者开源的 `Outsider565/LoRA-GA`（提交 `c4cd5372`）基础上适配了 T5-base 五任务实验。`reference/` 保留作者源码节选及许可证。作者的梯度估计与初始化位于 [reference/run_exp.py](reference/run_exp.py)；本组正式训练调用的核心方法位于 [glue/adapters.py](glue/adapters.py)。
+本仓库整理自课程源码快照 `df76fc9b336c8d96e2ef6969eae489acbabbae27`。本组在论文作者开源的 `Outsider565/LoRA-GA`（提交 `c4cd5372`）基础上适配了 T5-base 五任务实验。`reference/` 保留作者源码节选及许可证。作者的梯度估计与初始化位于 [reference/run_exp.py](reference/run_exp.py)；本组正式训练调用的核心方法位于 [glue/adapters.py](glue/adapters.py)。
 
 | 算法步骤 | 作者实现（`reference/run_exp.py`） | 本组实现（`glue/adapters.py`） |
 |---|---|---|
@@ -37,7 +45,7 @@
 | MRPC | 两句话是否表达相同含义 | 68.38 | 85.29 | +16.91 |
 | **Average（论文印刷值）** | **五任务平均** | **82.08** | **87.77** | **+5.69** |
 
-复现时，每个任务分别运行 LoRA 和 LoRA-GA，采用相同的三个种子（0、1、2），共 **5 × 2 × 3 = 30 次训练**。比较时既看五任务平均，也看能否观察到论文中 CoLA、MRPC 提升较大的现象。本组汇总表并列论文值、三种子实测均值、样本标准差及逐种子差值。论文中 LoRA 的五项均值按展示值重算为 82.006%，汇总时保留这个重算值和论文印出的 82.08%。[论文数值清单](paper_reference.json)
+复现时，每个任务分别运行 LoRA 和 LoRA-GA，采用相同的三个种子（0、1、2），共 **5 × 2 × 3 = 30 次训练**。比较时既看五任务平均，也看能否观察到论文中 CoLA、MRPC 提升较大的现象。本组汇总表并列论文值、三种子实测均值、样本标准差及逐种子差值。论文中 LoRA 的五项均值按展示值重算为 82.006%，汇总时保留这个重算值和论文印出的 82.08%。[论文数值清单](experiments/paper_reference.json)
 
 ## 补充实验：表 9 的 MRPC 初始化消融
 
@@ -47,13 +55,13 @@
 |---|---:|---:|---:|---:|---:|
 | 论文 MRPC Accuracy（%） | 68.38 | 68.38 | 67.97 | 66.09 | 85.29 |
 
-LoRA 与 LoRA-GA 复用主实验的 MRPC 结果，中间三种方法各增加三个种子，共补充 **9 次训练**。主实验与消融合计 **39 次**。报告还可以用同一批训练日志绘制 loss 随更新步数变化的曲线，对照论文图 3 的收敛趋势。
+LoRA 与 LoRA-GA 复用主实验的 MRPC 结果，中间三种方法各增加三个种子，共补充 **9 次训练**。主实验与消融合计 **39 次**。报告第 4 章根据同一批日志绘制了 CoLA 和 MRPC 的训练曲线。
 
 ## 实验设置与核验
 
 - 使用 T5-base，在每个任务的完整训练集上训练 1 轮。两种主方法使用相同的样本顺序、更新预算和验证时点。主要参数为秩 8、LoRA α = 16、有效 batch 32、FP32、AdamW 和学习率 1e-4。
 - 五个任务的主指标均为验证集 Accuracy。MNLI 在解码首位置比较三个候选标签，用 matched 验证集计入主表，并单列 mismatched。主表采用完整一轮的最后一步；作者公共训练脚本配置为按验证损失选择检查点。
-- 测试直接执行作者的数据映射与编码函数，逐项检查五任务的提示词、标签和验证划分，并在微型 T5 上比较整批与微批累积的损失和梯度。[复现实验记录](docs/复现实验记录.md) · [数据来源](docs/data/数据来源.md)
+- 测试直接执行作者的数据映射与编码函数，逐项检查五任务的提示词、标签和验证划分，并在微型 T5 上比较整批与微批累积的损失和梯度。[损失与梯度对照测试](tests/test_loss_protocol.py) · [数据来源](docs/data/数据来源.md)
 
 ## 如何运行
 
@@ -77,25 +85,11 @@ python -m pip install -r requirements.txt
 python -m pip check
 ```
 
-**服务器材料。** 从本机把 `assets/` 的内容复制到项目根目录下的 `assets/`。T5-base 的 `model.safetensors`、`config.json`、`generation_config.json`、`spiece.model` 和 `tokenizer.json` 放在 `assets/t5-base/`，五个任务分别放在 `assets/{mnli,sst2,cola,qnli,mrpc}/`。各任务需要 `train.parquet`，MNLI 另需 `validation_matched.parquet` 和 `validation_mismatched.parquet`，其余四个任务各需 `validation.parquet`。复制后在已激活的项目环境运行以下离线检查。模型文件的预期 SHA-256 来自 `glue/prepare.py`，数据文件的大小、行数和 SHA-256 来自 `glue_files.json`。
+**训练前准备。** 五个任务的 11 份 Parquet 分别存放在 `assets/{mnli,sst2,cola,qnli,mrpc}/` 下。从提交包运行时，可先用 `audit` 核对随包数据，再用 `prepare` 准备 T5-base。从空仓库开始复现时，先执行 `prepare` 下载固定版本的模型和数据，再执行 `audit`。已有模型可放在 `assets/t5-base/`，`prepare` 会校验并复用已有文件。
 
 ```bash
-python - <<'CHECK_ASSETS'
-from glue.machine import current
-from glue.prepare import MODEL_HASH, digest
-from glue.audit_glue_data import audit
-
-for name, expected in MODEL_HASH.items():
-    path = current.model_dir / name
-    if not path.is_file() or digest(path) != expected:
-        raise SystemExit(f"模型文件缺失或 SHA-256 不符：{path}")
-records = audit(current.data_dir)["files"]
-for record in records:
-    print(record["path"], record["status"])
-if len(records) != 11 or any(r["status"] != "verified" for r in records):
-    raise SystemExit("GLUE 数据未通过校验")
-print("T5-base 5/5，GLUE 11/11")
-CHECK_ASSETS
+python suite.py audit
+python suite.py prepare
 ```
 
 **四卡运行（Linux）。** 已部署的服务器环境从项目根目录用 `source .venv/bin/activate` 激活。获得同一计算节点的四张 GPU 后，在作业环境中保留调度器提供的设备可见性，用 `hostname` 和下面的命令核对逻辑卡，再手动运行 MRPC 三步短测。短测保存在 `runs/glue-smoke-v1/`。
@@ -112,17 +106,25 @@ python suite.py run --smoke --task mrpc --method ga --seed 0 --device cuda:0 --m
 python suite.py list --smoke --task mrpc --method ga --seed 0
 ```
 
-确认短测显示“完整完成”后，从同一作业执行下列命令。`run_a100_4gpu.sh` 同样适用于 4 × RTX 3090 24GB。每卡独立训练，脚本继承作业的可见 GPU，按逻辑编号 0–3 分工。训练和验证 batch 默认均为 32，有效 batch 32，梯度累积 1 次。每次启动分别写入 `runs/launcher-*/gpu-{0,1,2,3}.log`，39 项正式结果保存在 `runs/glue-v1/`。
+确认短测显示“完整完成”后，从同一作业执行下列命令。`experiments/run_a100_4gpu.sh` 同样适用于 4 × RTX 3090 24GB。每卡独立训练，脚本继承作业的可见 GPU，按逻辑编号 0–3 分工。训练和验证 batch 默认均为 32，有效 batch 32，梯度累积 1 次。每次启动分别写入 `runs/launcher-*/gpu-{0,1,2,3}.log`，39 项正式结果保存在 `runs/glue-v1/`。
 
 ```bash
-TRAIN_MICRO=32 EVAL_BATCH=32 bash run_a100_4gpu.sh
+TRAIN_MICRO=32 EVAL_BATCH=32 bash experiments/run_a100_4gpu.sh
 ```
 
 直接使用 `python suite.py run` 时，默认设备为 `cuda:0`，训练 microbatch 和验证 batch 均为 8。换设备或使用共享存储时，可在子命令后指定 `--device`、`--microbatch`、`--eval-batch`、`--model-dir`、`--data-dir`、`--runs-dir`、`--analysis-dir` 和 `--cache-dir`，也可使用 `--config machine.local.json`。正式训练中断时，用 `python suite.py run --retry --task mrpc --method ga --seed 0 --microbatch 32 --eval-batch 32` 这样的命令从头重跑对应配置，旧记录保留。可选的 `python suite.py diagnose --seed 0` 单独检查 MRPC 的首步更新方向。
 
 ## 实验结果与复核
 
-`analyze --plot` 从已完成运行的逐条预测重建对照表，并根据训练日志绘制收敛曲线。`package check` 检查实验材料解压后能否重建相同的结果。
+核验随包结果时，在根目录运行以下命令。三条命令均使用 Python 标准库，依次校验 39 份归档、报告表 1 和表 2。
+
+```bash
+python results/glue-v1/verify_results.py
+python report/analyze_main.py
+python report/analyze_mrpc.py
+```
+
+自行训练后，可用以下命令处理本地 `runs/` 中的运行记录。`analyze --plot` 生成下表列出的文件，`package check` 检查本地运行记录打包解压后能否重建相同的结果。
 
 ```bash
 python suite.py analyze --plot

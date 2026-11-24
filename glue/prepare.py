@@ -85,7 +85,7 @@ def prepare_assets(tasks,weights=True):
 
 
 def locked_files(name):
-    meta=json.loads((ROOT/"glue_files.json").read_text(encoding="utf8"))
+    meta=json.loads((ROOT/"experiments/glue_files.json").read_text(encoding="utf8"))
     assert meta["revision"]==DATA_REV
     files=meta["tasks"][name]
     for split,n in {"train":TASKS[name].train,**TASKS[name].validation}.items():

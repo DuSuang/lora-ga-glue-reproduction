@@ -21,7 +21,7 @@ from glue.glue_tasks import TASKS
 # Only reviewed source, documentation and pinned reference files enter the archive.
 CORE = (
     "suite.py", "README.md", "requirements.txt", "docs/validation/windows-requirements.txt",
-    "glue_files.json", "paper_reference.json", "docs/复现实验记录.md",
+    "experiments/glue_files.json", "experiments/paper_reference.json", "experiments/run_a100_4gpu.sh",
     "docs/data/MSR-SSLA.rtf", "docs/data/MRPC-NOTICE.txt", "docs/data/数据来源.md",
     "docs/validation/glue_files_actual.json", "docs/validation/loss_protocol.json",
     "reference/LICENSE","reference/data.py","reference/utils.py","reference/run_exp.py","reference/logTrainer.py",

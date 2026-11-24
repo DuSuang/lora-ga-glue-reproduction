@@ -24,7 +24,7 @@ def analyze():
     spec = importlib.util.spec_from_file_location("archive_verifier", RESULTS / "verify_results.py")
     verifier = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(verifier)
-    paper = json.loads((ROOT / "paper_reference.json").read_text(encoding="utf8"))["table9_mrpc"]
+    paper = json.loads((ROOT / "experiments/paper_reference.json").read_text(encoding="utf8"))["table9_mrpc"]
     records = verifier.rows((RESULTS / "per_seed.csv").read_bytes())
     scores, cases = {}, {}
     gold = None

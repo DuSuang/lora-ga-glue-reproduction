@@ -86,7 +86,7 @@ def comparison(name,split,observations,reference):
 
 
 def report_tables(out,values,run_rows,equal):
-    paper=json.loads((ROOT/"paper_reference.json").read_text(encoding="utf8"))
+    paper=json.loads((ROOT/"experiments/paper_reference.json").read_text(encoding="utf8"))
     table=[]
     for i,t in enumerate(paper["task_order"]):
         for split in TASKS[t].validation:
